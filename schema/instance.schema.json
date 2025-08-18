@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "walNUT Integration Instance",
+  "type": "object",
+  "required": ["plugin_id", "instance_id", "config"],
+  "properties": {
+    "plugin_id": { "type": "string" },
+    "instance_id": { "type": "string" },
+    "name": { "type": "string" },
+    "config": { "type": "object" },
+    "secrets_ref": { "type": "object" },
+    "overrides": {
+      "type": "object",
+      "properties": {
+        "http": {
+          "type": "object",
+          "properties": {
+            "timeout_s": { "type": "integer" },
+            "retries": { "type": "integer" },
+            "backoff_ms_start": { "type": "integer" },
+            "verify_tls": { "type": "boolean" }
+          }
+        },
+        "heartbeat_interval_s": { "type": "integer" },
+        "circuit_breaker": {
+          "type": "object",
+          "properties": {
+            "failures": { "type": "integer" },
+            "window_s": { "type": "integer" },
+            "cooldown_s": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "state": { "type": "string", "enum": ["connected", "degraded", "error", "unknown"] }
+  }
+}

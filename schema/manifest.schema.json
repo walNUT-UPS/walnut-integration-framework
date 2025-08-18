@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "walNUT Integration Manifest",
+  "type": "object",
+  "required": ["id", "name", "version", "min_core_version", "schema", "capabilities", "test"],
+  "properties": {
+    "id": { "type": "string", "minLength": 3 },
+    "name": { "type": "string" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+" },
+    "category": { "type": "string" },
+    "min_core_version": { "type": "string" },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "connection": { "type": "object" }
+      },
+      "required": ["connection"]
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "http": {
+          "type": "object",
+          "properties": {
+            "timeout_s": { "type": "integer", "default": 5 },
+            "retries": { "type": "integer", "default": 2 },
+            "backoff_ms_start": { "type": "integer", "default": 250 },
+            "verify_tls": { "type": "boolean", "default": true },
+            "user_agent_suffix": { "type": "string" }
+          }
+        },
+        "heartbeat_interval_s": { "type": "integer", "default": 120 }
+      }
+    },
+    "test": {
+      "type": "object",
+      "properties": {
+        "method": { "type": "string", "enum": ["http"] },
+        "http": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "object",
+              "properties": {
+                "method": { "type": "string" },
+                "path": { "type": "string" },
+                "headers": { "type": "object" },
+                "body": {}
+              },
+              "required": ["method", "path"]
+            },
+            "success_when": { "type": "string" }
+          },
+          "required": ["request"]
+        }
+      },
+      "required": ["method"]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "verbs", "targets"],
+        "properties": {
+          "id": { "type": "string" },
+          "verbs": { "type": "array", "items": { "type": "string" } },
+          "targets": { "type": "array", "items": { "type": "string" } },
+          "dry_run": { "type": "string", "enum": ["required", "optional", "unsupported"], "default": "optional" },
+          "rate_limit": {
+            "type": "object",
+            "properties": {
+              "rps": { "type": "number" },
+              "burst": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "discovery": {
+      "type": "object",
+      "properties": {
+        "implements": { "type": "string", "enum": ["inventory.list"] },
+        "interval_s": { "type": "integer" }
+      }
+    },
+    "errors": { "type": "object" }
+  }
+}
