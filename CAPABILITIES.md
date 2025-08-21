@@ -1,26 +1,26 @@
-# Controlled Capability Vocabulary (v0)
+# Capability Vocabulary
 
-> Policies call instance actions via capability + verb + target.
+> Policies call instance actions via a `capability` + `verb` + `target`.
 
-## Power / lifecycle
+This document lists the core vocabulary. Integrations may define their own vendor-specific capabilities using a reverse-DNS naming convention (e.g., `com.aruba.switch.poe.priority`).
+
+## Core Capabilities
+
+### Power / Lifecycle
 - `power.control` → targets: `host | outlet | poe-port`
   - verbs: `on | off | cycle`
 
-## Virtualization
+### Virtualization
 - `vm.lifecycle` → target: `vm`
   - verbs: `start | shutdown | stop | restart | suspend | resume`
 
-## Network (PoE)
+### Network (PoE)
 - `network.poe` → target: `poe-port`
   - verbs: `enable | disable`
-  - notes: integrations **should** expose port priority (`high|normal|low`) via discovery or attributes to enable “power off low-priority” policies.
 
-## Notifications
+### Notifications
 - `notify.send` → target: `event | text`
   - verbs: `post`
 
-## Generic HTTP (optional for power users)
-- `http.request` → target: `webhook`
-  - verbs: `get | post | put | patch | delete`
-
-> Anything not listed here is out-of-scope for v1 (e.g., VLAN ops, storage arrays/datasets).
+## Guidance for Integrations
+The framework does not define complex semantics such as PoE power priority or VLAN tagging. Integrations **may** implement these features through vendor-specific capabilities or by exposing rich attributes on targets. For example, an integration could expose a `priority` attribute on a `poe-port` target to enable "power off low-priority" policies.

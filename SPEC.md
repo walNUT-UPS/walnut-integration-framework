@@ -2,59 +2,60 @@
 
 **File:** `plugin.yaml` (YAML 1.2)
 
-## Top-level
+## Top-level Fields
 
-- `id` (string, required): globally unique (reverse DNS style recommended).
-- `name` (string, required)
-- `version` (semver, required)
-- `category` (enum): `host-orchestrator | network | smart-device | notifications | generic`
-- `min_core_version` (semver range, required)
-- `schema.connection` (JSON-Schema object, required): user-editable fields. Mark secrets with `secret: true`.
-- `defaults` (object): 
-  - `http`: `{ timeout_s, retries, backoff_ms_start, verify_tls, user_agent_suffix }`
-  - `heartbeat_interval_s`
-- `test` (object, required): how to validate connectivity & permissions.
-  - `method`: `http` (v1)
-  - `http`: `{ request: { method, path, headers?, body? }, success_when: <jsonpath or status code set> }`
-- `capabilities` (array, required): capability declarations (see `CAPABILITIES.md`)
-  - item: 
-    - `id`: e.g., `vm.lifecycle`
-    - `verbs`: list of supported verbs (e.g., `[shutdown, restart]`)
-    - `targets`: list of supported target types (e.g., `[vm]`)
-    - `dry_run`: `required | optional | unsupported`
-    - `rate_limit`: optional `{ rps, burst }`
-- `discovery` (object, optional): inventory listing.
-  - `implements`: e.g., `inventory.list`
-  - `interval_s`: default 600
-- `errors` (optional): extend base taxonomy with subcodes.
+- `id` (string, required): A globally unique identifier for the integration, typically in reverse-DNS format (e.g., `com.vendor.integration`).
+- `name` (string, required): A human-readable name for the integration.
+- `version` (semver, required): The version of the integration manifest.
+- `min_core_version` (semver range, required): The minimum version of the core framework required to run this integration.
+- `schema.connection` (JSON-Schema object, required): Defines the configuration fields required for an instance of this integration (e.g., hostname, credentials). These fields are defined by the integration developer and presented to the user. Mark sensitive fields with `secret: true`.
+- `defaults` (object, optional): Default values for transport configurations and other behaviors.
+  - `transports`: A container for transport-specific default settings. See the "Transports" section for details.
+  - `heartbeat_interval_s`: Default interval in seconds for health checks.
+- `test` (object, required): A definition for a connection test used to validate an instance's configuration and connectivity.
+  - `method` (enum, required): The transport protocol to use for the test. Allowed values: `http` | `ssh` | `mqtt` | `websocket`.
+  - `http` (object, optional): HTTP test configuration.
+    - `request`: `{ method, path, headers?, body? }`
+    - `success_when`: JSONPath expression or status code to evaluate success.
+  - `ssh` (object, optional): SSH test configuration.
+    - `commands`: `{ commands: [string], prompt_hint?, enable_password_ref? }`
+  - `mqtt` (object, optional): MQTT test configuration.
+    - `ping`: `{ broker, topic, payload?, expect_topic?, timeout_s? }`
+  - `websocket` (object, optional): WebSocket test configuration.
+    - `probe`: `{ url, send?, expect? }`
+- `capabilities` (array, required): A list of capabilities this integration provides. See `CAPABILITIES.md`.
+- `discovery` (object, optional): Configuration for automated inventory discovery.
+- `errors` (object, optional): Extensions to the base error taxonomy. See `ERRORS.md`.
 
-### Instance model (runtime)
+## Transports
 
-Instances are persisted by core, validated against `schema.connection`, and enriched with:
-- `state`: `connected | degraded | error | unknown`
-- `last_test`, `latency_ms`
-- `overrides`: `{ http, heartbeat_interval_s, circuit_breaker }`
-- `audit`: created/updated by, timestamps
+Integrations can define default connection parameters for various transports. These can be overridden at the instance level.
 
-See `instance.schema.json`.
+### `defaults.transports.http`
+- `timeout_s`, `retries`, `backoff_ms_start`, `verify_tls`, `user_agent_suffix`
+- **Note**: The framework provides standard HTTP client features like retries (idempotent GET/HEAD by default), timeouts (default 5s), and TLS verification. Core injects a `User-Agent` header.
 
-## HTTP Standardization (v1)
+### `defaults.transports.ssh`
+- `port`, `timeout_s`, `pty_required`, `key_exchange_algorithms`
 
-- Retries: default 2, exponential backoff starting at 250ms (jittered), idempotent GET/HEAD by default; POST retry enabled only if manifest sets `retry_on_post: true`.
-- Timeouts: default 5s.
-- TLS: verify by default; instance may override.
-- Headers: core injects `User-Agent: walnut/<core-version> (+<integration-id>)`.
+### `defaults.transports.mqtt`
+- `port`, `client_id_prefix`, `timeout_s`, `use_tls`
+
+### `defaults.transports.websocket`
+- `timeout_s`, `max_payload_size_kb`, `handshake_headers`
 
 ## Heartbeats
 
-- Core schedules heartbeats at `heartbeat_interval_s` (default 120).
-- Result must map to `connected|degraded|error` with `latency_ms` and `error_code?`.
+- Core schedules heartbeats at the configured `heartbeat_interval_s` (default 120).
+- Heartbeat operations should be lightweight and read-only where possible.
+- The result must map to a `state` (`connected`|`degraded`|`error`) and include `latency_ms` and an optional `error_code`.
 
 ## Dry-run
 
-- If `dry_run: required|optional`, actions **must** return a plan (see `DRYRUN.md`).
-- Policies can require dry-run before execute.
+- If a capability has `dry_run: required` or `optional`, its actions must support returning a plan.
+- The plan may contain steps across different transports (e.g., an SSH command and an HTTP request).
+- For the detailed plan structure, see `DRYRUN.md`.
 
-## Circuit breaking
+## Circuit Breaking
 
 - Default: trip after 3 consecutive failures in 60s; cooldown 120s. Instance overrides allowed.

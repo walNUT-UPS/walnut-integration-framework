@@ -19,15 +19,16 @@
     "defaults": {
       "type": "object",
       "properties": {
-        "http": {
+        "http": { "$ref": "#/$defs/httpDefaults" },
+        "transports": {
           "type": "object",
           "properties": {
-            "timeout_s": { "type": "integer", "default": 5 },
-            "retries": { "type": "integer", "default": 2 },
-            "backoff_ms_start": { "type": "integer", "default": 250 },
-            "verify_tls": { "type": "boolean", "default": true },
-            "user_agent_suffix": { "type": "string" }
-          }
+            "http": { "$ref": "#/$defs/httpDefaults" },
+            "ssh": { "type": "object" },
+            "mqtt": { "type": "object" },
+            "websocket": { "type": "object" }
+          },
+          "additionalProperties": true
         },
         "heartbeat_interval_s": { "type": "integer", "default": 120 }
       }
@@ -35,46 +36,61 @@
     "test": {
       "type": "object",
       "properties": {
-        "method": { "type": "string", "enum": ["http"] },
-        "http": {
+        "method": { "type": "string", "enum": ["http", "ssh", "mqtt", "websocket"] },
+        "http": { "$ref": "#/$defs/httpTest" },
+        "ssh": {
           "type": "object",
           "properties": {
-            "request": {
+            "commands": {
               "type": "object",
               "properties": {
-                "method": { "type": "string" },
-                "path": { "type": "string" },
-                "headers": { "type": "object" },
-                "body": {}
+                "commands": { "type": "array", "items": { "type": "string" } },
+                "prompt_hint": { "type": "string" },
+                "enable_password_ref": { "type": "string" }
               },
-              "required": ["method", "path"]
-            },
-            "success_when": { "type": "string" }
+              "required": ["commands"]
+            }
           },
-          "required": ["request"]
+          "required": ["commands"]
+        },
+        "mqtt": {
+          "type": "object",
+          "properties": {
+            "ping": {
+              "type": "object",
+              "properties": {
+                "broker": { "type": "string" },
+                "topic": { "type": "string" },
+                "payload": {},
+                "expect_topic": { "type": "string" },
+                "timeout_s": { "type": "integer" }
+              },
+              "required": ["broker", "topic"]
+            }
+          },
+          "required": ["ping"]
+        },
+        "websocket": {
+          "type": "object",
+          "properties": {
+            "probe": {
+              "type": "object",
+              "properties": {
+                "url": { "type": "string" },
+                "send": {},
+                "expect": {}
+              },
+              "required": ["url"]
+            }
+          },
+          "required": ["probe"]
         }
       },
       "required": ["method"]
     },
     "capabilities": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "verbs", "targets"],
-        "properties": {
-          "id": { "type": "string" },
-          "verbs": { "type": "array", "items": { "type": "string" } },
-          "targets": { "type": "array", "items": { "type": "string" } },
-          "dry_run": { "type": "string", "enum": ["required", "optional", "unsupported"], "default": "optional" },
-          "rate_limit": {
-            "type": "object",
-            "properties": {
-              "rps": { "type": "number" },
-              "burst": { "type": "integer" }
-            }
-          }
-        }
-      },
+      "items": { "$ref": "#/$defs/capability" },
       "minItems": 1
     },
     "discovery": {
@@ -85,5 +101,51 @@
       }
     },
     "errors": { "type": "object" }
+  },
+  "$defs": {
+    "httpDefaults": {
+      "type": "object",
+      "properties": {
+        "timeout_s": { "type": "integer", "default": 5 },
+        "retries": { "type": "integer", "default": 2 },
+        "backoff_ms_start": { "type": "integer", "default": 250 },
+        "verify_tls": { "type": "boolean", "default": true },
+        "user_agent_suffix": { "type": "string" }
+      }
+    },
+    "httpTest": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "object",
+          "properties": {
+            "method": { "type": "string" },
+            "path": { "type": "string" },
+            "headers": { "type": "object" },
+            "body": {}
+          },
+          "required": ["method", "path"]
+        },
+        "success_when": { "type": "string" }
+      },
+      "required": ["request"]
+    },
+    "capability": {
+      "type": "object",
+      "required": ["id", "verbs", "targets"],
+      "properties": {
+        "id": { "type": "string" },
+        "verbs": { "type": "array", "items": { "type": "string" } },
+        "targets": { "type": "array", "items": { "type": "string" } },
+        "dry_run": { "type": "string", "enum": ["required", "optional", "unsupported"], "default": "optional" },
+        "rate_limit": {
+          "type": "object",
+          "properties": {
+            "rps": { "type": "number" },
+            "burst": { "type": "integer" }
+          }
+        }
+      }
+    }
   }
 }

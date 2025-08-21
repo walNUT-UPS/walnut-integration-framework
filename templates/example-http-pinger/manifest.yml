@@ -1,0 +1,49 @@
+id: com.walnut.http-pinger
+name: HTTP Pinger (Example)
+version: 0.2.0
+category: generic
+min_core_version: "0.10.0"
+
+schema:
+  connection:
+    type: object
+    required: [endpoint]
+    properties:
+      endpoint: { type: string, format: uri, title: Base URL }
+      auth_header: { type: string, secret: true, title: Optional Auth Header }
+
+defaults:
+  transports:
+    http:
+      timeout_s: 5
+      retries: 2
+      verify_tls: true
+  heartbeat_interval_s: 120
+
+test:
+  method: http
+  http:
+    request:
+      method: GET
+      path: /ping
+    success_when: "status == 200"
+
+capabilities:
+  - id: power.control
+    verbs: [on, off]
+    targets: [outlet]
+    dry_run: required
+    # Example of the plan this capability would return when `dry_run: true` is passed.
+    # See DRYRUN.md for the full contract.
+    example_dry_run_plan:
+      steps:
+        - http.request:
+            method: POST
+            url: "{{ connection.endpoint }}/outlets/1/state"
+            body: { "state": "{{ verb }}" }
+      expected_effect:
+        - target: { type: outlet, id: "1" }
+          from: { state: "on" }
+          to: { state: "off" }
+      risk: low
+      revert_hint: "Call with the opposite verb."
