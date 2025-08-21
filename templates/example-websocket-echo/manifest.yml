@@ -1,0 +1,42 @@
+id: com.walnut.websocket-echo
+name: WebSocket Echo (Example)
+version: 0.1.0
+category: generic
+min_core_version: "0.10.0"
+
+schema:
+  connection:
+    type: object
+    required: [url]
+    properties:
+      url: { type: string, title: WebSocket URL, example: "wss://echo.websocket.events" }
+      auth_token: { type: string, title: Auth Token, secret: true }
+
+defaults:
+  transports:
+    websocket:
+      timeout_s: 10
+
+test:
+  method: websocket
+  websocket:
+    probe:
+      url: "{{ connection.url }}"
+      send: '{"command":"ping"}'
+      expect:
+        contains: "pong"
+
+capabilities:
+  - id: notify.send
+    verbs: [post]
+    targets: [webhook] # Using webhook as a generic target
+    dry_run: optional
+    example_dry_run_plan:
+      steps:
+        - websocket.sendrecv:
+            url: "{{ connection.url }}"
+            send: { "message": "hello world" }
+      expected_effect:
+        - "A message will be sent to the WebSocket server."
+      risk: low
+      notes: "This is a fire-and-forget message."

@@ -1,0 +1,45 @@
+id: com.walnut.mqtt-plug
+name: MQTT Smart Plug (Example)
+version: 0.1.0
+category: smart-device
+min_core_version: "0.10.0"
+
+schema:
+  connection:
+    type: object
+    required: [broker_url, username, password]
+    properties:
+      broker_url: { type: string, title: MQTT Broker URL, example: "mqtt://192.168.1.100:1883" }
+      username: { type: string, title: Username }
+      password: { type: string, title: Password, secret: true }
+      client_id: { type: string, title: Client ID, default: "walnut-mqtt-plug" }
+
+defaults:
+  transports:
+    mqtt:
+      timeout_s: 10
+
+test:
+  method: mqtt
+  mqtt:
+    # This test assumes an unauthenticated broker for simplicity.
+    # A real test might publish to a test topic and expect a response.
+    ping:
+      broker: "{{ connection.broker_url }}"
+      topic: "walnut/test"
+
+capabilities:
+  - id: power.control
+    verbs: [on, off]
+    targets: [outlet]
+    dry_run: required
+    example_dry_run_plan:
+      steps:
+        - mqtt.publish:
+            broker: "{{ connection.broker_url }}"
+            topic: "zigbee2mqtt/desk/plug/set"
+            payload: '{"state": "{{ verb | upper }}"}'
+      expected_effect:
+        - "The plug at 'zigbee2mqtt/desk/plug' will be turned {{ verb }}."
+      risk: low
+      revert_hint: "Call the capability with the opposite verb."
