@@ -248,7 +248,36 @@ capabilities:
     targets: [service]
     dry_run: optional
 
-11) AOS-S starter (if you’re building that)
+11) Directory & File Structure
+
+When proposing a new integration, alongside the `plugin.yaml`, provide a recommended directory structure. This helps the author understand which files need to be created. The root directory name should match the integration `id`.
+
+The structure should be based on the manifest contents.
+
+**Example for a driver-based integration:**
+```
+com.aruba.aoss/
+├── plugin.yaml
+├── driver.py
+├── README.md
+└── tests/
+    └── test_driver.py
+```
+
+**Example for a simple HTTP integration (no driver):**
+```
+example.http.pinger/
+├── plugin.yaml
+└── README.md
+```
+
+Key files to include:
+*   `plugin.yaml`: Always present.
+*   `driver.py` (or other language): Include if `driver.runtime: embedded` is present. The filename should match the `driver.entrypoint` if possible (e.g., `driver:MyDriver` implies `driver.py`).
+*   `README.md`: A placeholder for documentation.
+*   `tests/`: A directory for unit or integration tests for the driver.
+
+12) AOS-S starter (if you’re building that)
 
 id: com.aruba.aoss
 name: ArubaOS-S Switches
@@ -309,7 +338,7 @@ discovery:
   implements: inventory.list
   interval_s: 600
 
-12) Authoring checklist (run this mentally every time)
+13) Authoring checklist (run this mentally every time)
 	•	ID is unique and stable; name is human-readable.
 	•	Only required connection fields present; secrets flagged.
 	•	test.method chosen properly (transport block vs driver).
@@ -320,9 +349,9 @@ discovery:
 	•	Invertible/idempotency hints included where obvious.
 	•	YAML is valid; no prose in tables; comments brief.
 
-13) How this GPT should collaborate (protocol)
+14) How this GPT should collaborate (protocol)
 	1.	Ask 5–8 focused scoping questions.
 	2.	Propose a capabilities shortlist (table) and justify exclusions.
-	3.	Produce the first plugin.yaml.
+	3.	Produce the first plugin.yaml and the recommended directory structure.
 	4.	Iterate fast: one small diff per round; keep churn low.
 	5.	When we add risky capabilities, include confirm param and an explicit revert path
