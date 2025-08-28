@@ -1,0 +1,75 @@
+id: example.proxmox.ve
+name: Example Proxmox VE Integration
+version: 1.0.0
+min_core_version: 0.10.0
+category: host-orchestrator
+
+driver:
+  entrypoint: driver:ExampleProxmoxVeDriver
+
+schema:
+  connection:
+    type: object
+    required: [host, port, node, api_token]
+    properties:
+      host:
+        type: string
+        title: Proxmox VE Host
+        description: IP address or hostname of Proxmox VE server
+      port:
+        type: integer
+        default: 8006
+        title: API Port
+        description: Proxmox VE API port
+      node:
+        type: string
+        title: Node Name
+        description: Target Proxmox node name
+      api_token:
+        type: string
+        secret: true
+        title: API Token
+        description: Proxmox VE API token for authentication
+
+defaults:
+  heartbeat_interval_s: 120
+  dry_run_refresh_sla_s: 5
+
+test:
+  method: http
+  http:
+    request:
+      method: GET
+      path: /api2/json/version
+    success_when: "status == 200"
+
+capabilities:
+  - id: vm.lifecycle
+    verbs: [shutdown, start, stop, suspend, resume, reset]
+    targets: [vm]
+    dry_run: required
+    invertible:
+      start:
+        inverse: shutdown
+      shutdown:
+        inverse: start
+    idempotency:
+      key_fields: [verb, target_id]
+  
+  - id: power.control
+    verbs: [shutdown, cycle]
+    targets: [host]
+    dry_run: required
+    idempotency:
+      key_fields: [verb, target_id]
+  
+  - id: inventory.list
+    verbs: [list]
+    targets: [vm, host]
+    dry_run: optional
+
+discovery:
+  implements: inventory.list
+  interval_s: 600
+
+errors: {}

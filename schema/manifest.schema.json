@@ -1,20 +1,55 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "walNUT Integration Manifest",
+  "description": "Schema for walNUT integration plugin.yaml files - reflects current enforcement from orchestrator audit 1a3a090",
   "type": "object",
-  "required": ["id", "name", "version", "min_core_version", "schema", "capabilities", "test"],
+  "required": ["id", "name", "version", "min_core_version", "category", "driver", "schema", "capabilities"],
   "properties": {
-    "id": { "type": "string", "minLength": 3 },
-    "name": { "type": "string" },
-    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+" },
-    "category": { "type": "string" },
-    "min_core_version": { "type": "string" },
+    "id": { 
+      "type": "string", 
+      "minLength": 3,
+      "description": "Unique identifier (e.g., com.aruba.aoss, walnut.proxmox.ve)"
+    },
+    "name": { 
+      "type": "string",
+      "description": "Human-readable display name"
+    },
+    "version": { 
+      "type": "string", 
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "description": "Semantic version (e.g., 0.1.0)"
+    },
+    "category": { 
+      "type": "string",
+      "description": "UI grouping hint (network-device, host-orchestrator, generic, etc.)"
+    },
+    "min_core_version": { 
+      "type": "string",
+      "description": "Minimum orchestrator version (e.g., 0.10.0)"
+    },
+    "driver": {
+      "type": "object",
+      "required": ["entrypoint"],
+      "properties": {
+        "entrypoint": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*:[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Format: module:ClassName (e.g., driver:ProxmoxVeDriver). Implies driver.py file exists."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Driver specification - requires driver.py file with specified class"
+    },
     "schema": {
       "type": "object",
       "properties": {
-        "connection": { "type": "object" }
+        "connection": { 
+          "type": "object",
+          "description": "JSON Schema for connection configuration. Properties with 'secret: true' are stored separately."
+        }
       },
-      "required": ["connection"]
+      "required": ["connection"],
+      "description": "Configuration schemas"
     },
     "defaults": {
       "type": "object",
@@ -24,19 +59,47 @@
           "type": "object",
           "properties": {
             "http": { "$ref": "#/$defs/httpDefaults" },
-            "ssh": { "type": "object" },
+            "ssh": { 
+              "type": "object",
+              "properties": {
+                "timeout_s": { "type": "integer" },
+                "port": { "type": "integer", "default": 22 }
+              }
+            },
             "mqtt": { "type": "object" },
-            "websocket": { "type": "object" }
+            "websocket": { "type": "object" },
+            "snmp": {
+              "type": "object",
+              "properties": {
+                "timeout_s": { "type": "integer" },
+                "port": { "type": "integer", "default": 161 }
+              }
+            }
           },
           "additionalProperties": true
         },
-        "heartbeat_interval_s": { "type": "integer", "default": 120 }
-      }
+        "heartbeat_interval_s": { 
+          "type": "integer", 
+          "default": 120,
+          "description": "Heartbeat/health check interval"
+        },
+        "dry_run_refresh_sla_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Freshness requirement for dry-run state (1-60 seconds)"
+        }
+      },
+      "description": "Default configuration values"
     },
     "test": {
       "type": "object",
       "properties": {
-        "method": { "type": "string", "enum": ["http", "ssh", "mqtt", "websocket"] },
+        "method": { 
+          "type": "string", 
+          "enum": ["http", "ssh", "mqtt", "websocket", "driver", "tcp"],
+          "description": "Test method - 'driver' means driver.test_connection() is called"
+        },
         "http": { "$ref": "#/$defs/httpTest" },
         "ssh": {
           "type": "object",
@@ -86,22 +149,29 @@
           "required": ["probe"]
         }
       },
-      "required": ["method"]
+      "required": ["method"],
+      "description": "Health test configuration"
     },
     "capabilities": {
       "type": "array",
       "items": { "$ref": "#/$defs/capability" },
-      "minItems": 1
+      "minItems": 1,
+      "description": "Array of capability definitions - each maps to driver method via id.replace('.', '_')"
     },
     "discovery": {
       "type": "object",
       "properties": {
         "implements": { "type": "string", "enum": ["inventory.list"] },
         "interval_s": { "type": "integer" }
-      }
+      },
+      "description": "Optional scheduled discovery configuration"
     },
-    "errors": { "type": "object" }
+    "errors": { 
+      "type": "object",
+      "description": "Reserved for future use - usually empty"
+    }
   },
+  "additionalProperties": false,
   "$defs": {
     "httpDefaults": {
       "type": "object",
@@ -134,10 +204,48 @@
       "type": "object",
       "required": ["id", "verbs", "targets"],
       "properties": {
-        "id": { "type": "string" },
-        "verbs": { "type": "array", "items": { "type": "string" } },
-        "targets": { "type": "array", "items": { "type": "string" } },
-        "dry_run": { "type": "string", "enum": ["required", "optional", "unsupported"], "default": "optional" },
+        "id": { 
+          "type": "string",
+          "description": "Capability identifier (dots allowed) - becomes method name via id.replace('.', '_')"
+        },
+        "verbs": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Array of action verbs (read, set, exec, list, etc.)"
+        },
+        "targets": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Array of target types (vm, stack_member, port, poe_port, etc.)"
+        },
+        "dry_run": { 
+          "type": "string", 
+          "enum": ["required", "optional", "not_supported"], 
+          "default": "optional",
+          "description": "Dry-run support level - enforced at validation"
+        },
+        "invertible": {
+          "type": "object",
+          "description": "Optional verb inversion hints for UI",
+          "patternProperties": {
+            "^[a-zA-Z_]+$": {
+              "type": "object",
+              "properties": {
+                "inverse": { "type": "string" }
+              }
+            }
+          }
+        },
+        "idempotency": {
+          "type": "object",
+          "properties": {
+            "key_fields": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Fields used to detect duplicate operations"
+            }
+          }
+        },
         "rate_limit": {
           "type": "object",
           "properties": {
@@ -145,7 +253,8 @@
             "burst": { "type": "integer" }
           }
         }
-      }
+      },
+      "description": "Individual capability definition - must have corresponding driver method"
     }
   }
 }
