@@ -31,6 +31,17 @@ schema:
         title: API Token
         description: Proxmox VE API token for authentication
 
+# Optional: Per-plugin dependencies (orchestrator >= 0.10.1 PRE-RELEASE)
+# requires:
+#   python: ">=3.8"
+#   deps:
+#     - "requests>=2.28.0"
+#     - name: "paramiko"
+#       version: ">=2.11.0"
+#       extras: ["ed25519"]
+#       markers: "sys_platform != 'win32'"
+#   wheelhouse: "wheels/"  # Optional: bundle pre-built wheels in .int file
+
 defaults:
   heartbeat_interval_s: 120
   dry_run_refresh_sla_s: 5

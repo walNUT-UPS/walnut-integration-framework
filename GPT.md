@@ -93,9 +93,38 @@ test:
     success_when: "status == 200"
 ```
 
-**Note**: No `requires` section is currently defined or enforced (see Section 11 Known Gaps).
+**Requirements Section (Optional)**: Available in orchestrator ≥ 0.10.1 PRE-RELEASE (see Section 2.7).
 
-### 2.6 Minimal Complete Example
+### 2.6 Requirements (Optional)
+
+**Per-Plugin Dependencies** - Available in orchestrator ≥ 0.10.1 PRE-RELEASE:
+```yaml
+requires:
+  python: ">=3.12,<3.13"           # Informational Python version range
+  deps:                            # List of dependencies  
+    - "requests>=2.28.0"           # Simple string spec
+    - name: "paramiko"             # Object spec with extras/markers
+      version: ">=2.11.0"
+      extras: ["ed25519"]
+      markers: "sys_platform != 'win32'"
+  wheelhouse: "wheels/"            # Optional offline wheel directory in .int bundle
+```
+
+**Runtime Behavior**:
+- **With requires**: Orchestrator creates per-plugin virtualenv and imports driver within that environment
+- **Without requires**: Legacy import rules apply (host Python environment)
+- **Wheelhouse**: If present, orchestrator prefers offline install from bundled wheels
+- **Online install**: Allowed when no wheelhouse provided
+
+**Validation Error Keys**:
+- `deps_missing` - Required dependencies not found
+- `deps_install_error` - Dependency installation failed  
+- `deps_unsupported_platform` - Platform constraints not met
+- `deps_wheelhouse_not_found` - Declared wheelhouse directory missing from bundle
+
+### 2.7 Minimal Complete Example
+
+**Basic example (legacy compatibility)**:
 ```yaml
 id: walnut.proxmox.ve
 name: Proxmox VE
@@ -129,6 +158,41 @@ capabilities:
   - id: inventory.list
     verbs: [list]
     targets: [vm, host]
+    dry_run: optional
+```
+
+**Example with dependencies (orchestrator ≥ 0.10.1)**:
+```yaml
+id: example.network.device
+name: Network Device Integration
+version: 1.0.0
+min_core_version: 0.10.1
+category: network-device
+driver:
+  entrypoint: driver:NetworkDeviceDriver
+requires:
+  python: ">=3.8"
+  deps:
+    - "requests>=2.28.0"
+    - "netmiko>=4.1.0"
+    - name: "cryptography"
+      version: ">=40.0.0"
+      markers: "platform_system != 'Windows'"
+  wheelhouse: "wheels/"     # Optional: bundle wheels in integration
+schema:
+  connection:
+    type: object
+    required: [hostname, username, password]
+    properties:
+      hostname: { type: string }
+      username: { type: string }
+      password: { type: string, secret: true }
+test:
+  method: driver
+capabilities:
+  - id: device.config
+    verbs: [read, backup]
+    targets: [device]
     dry_run: optional
 ```
 
@@ -330,6 +394,10 @@ Validation errors and their keys:
 | `capability_mismatch` | Capability method missing from driver | invalid |
 | `missing_test_connection` | Driver lacks `test_connection()` method | invalid |
 | `core_version_incompatible` | `min_core_version` > orchestrator version | invalid |
+| `deps_missing` | Required dependencies not found | invalid |
+| `deps_install_error` | Dependency installation failed | invalid |
+| `deps_unsupported_platform` | Platform constraints not met | invalid |
+| `deps_wheelhouse_not_found` | Declared wheelhouse directory missing | invalid |
 | `validation_error` | General validation failure | invalid |
 
 **Success**: Sets status=valid, persists capabilities/schema/defaults.
@@ -510,27 +578,14 @@ class ArubaOSSwitchDriver:
 
 **Recommendation**: Add `inspect.signature()` validation during type validation.
 
-### 11.2 Manifest `requires` Section  
-**Gap**: No schema enforcement for runtime/platform/python/dependency requirements.
-
-**Current**: Only `min_core_version` validated.
-
-**Planned**: Add optional `requires` block for:
-```yaml
-requires:
-  python: ">=3.8"
-  platform: ["linux", "darwin"] 
-  packages: ["requests>=2.28", "paramiko>=2.11"]
-```
-
-### 11.3 Type Removal → Instance State Propagation
+### 11.2 Type Removal → Instance State Propagation
 **Gap**: When integration type removed, instances not automatically marked `type_unavailable`.
 
 **Current**: Type marked `unavailable`, folder deleted, but instance states unchanged.
 
 **Impact**: API blocks operations but instance state doesn't reflect unavailability.
 
-### 11.4 Capability Verb/Target Validation
+### 11.3 Capability Verb/Target Validation
 **Gap**: No enforcement that declared verbs/targets are handled by driver methods.
 
 **Recommendation**: Extend validation to verify method parameter handling per declared capability scope.

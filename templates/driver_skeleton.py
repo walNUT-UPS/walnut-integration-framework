@@ -10,8 +10,19 @@ Key principles:
 - test_connection() is mandatory for all drivers
 - Method signatures follow expected patterns but aren't validated at install time
 - Dry-run support should return execution plans, not perform actions
+
+Third-party dependencies:
+- For orchestrator >= 0.10.1 PRE-RELEASE: declare dependencies in manifest requires.deps
+- Per-plugin virtualenv created when requires section is present
+- Without requires section: uses host Python environment (legacy)
+- Examples: requests, paramiko, netmiko, cryptography, etc.
 """
 from typing import Dict, List, Any, Optional
+
+# Third-party imports (declare in manifest requires.deps for orchestrator >= 0.10.1)
+# import requests
+# import paramiko
+# import netmiko
 
 
 class ExampleIntegrationDriver:

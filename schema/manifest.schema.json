@@ -169,6 +169,49 @@
     "errors": { 
       "type": "object",
       "description": "Reserved for future use - usually empty"
+    },
+    "requires": {
+      "type": "object",
+      "description": "Optional per-plugin dependencies (orchestrator ≥ 0.10.1 PRE-RELEASE)",
+      "properties": {
+        "python": {
+          "type": "string",
+          "description": "Informational Python version range (e.g., '>=3.12,<3.13')"
+        },
+        "deps": {
+          "type": "array",
+          "description": "List of Python dependencies",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Simple dependency spec (e.g., 'requests>=2.28.0')"
+              },
+              {
+                "type": "object",
+                "description": "Detailed dependency specification",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "description": "Package name" },
+                  "version": { "type": "string", "description": "Version constraint" },
+                  "extras": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Optional extras to install"
+                  },
+                  "markers": { "type": "string", "description": "Environment markers for conditional installation" }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "wheelhouse": {
+          "type": "string",
+          "description": "Optional directory name containing pre-built wheels within the .int bundle"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

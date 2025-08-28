@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Updated manifest schema with current enforcement rules from orchestrator
 - Driver skeleton template with Option A method signatures and documentation
 - Example plugin.yaml template based on Proxmox VE integration pattern
+- Optional per-plugin dependencies (`requires`) and per-plugin venv semantics (orchestrator ≥ 0.10.1 PRE-RELEASE). Backward-compatible. Wheelhouse preferred when present; otherwise online install allowed.
 
 ### Changed
 - GPT.md completely rewritten to encode current enforcement truth from orchestrator
