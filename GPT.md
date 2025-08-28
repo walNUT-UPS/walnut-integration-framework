@@ -55,7 +55,7 @@ schema:
 capabilities:
   - id: "poe.port"                    # Dots allowed; maps to method poe_port()
     verbs: ["set"]                    # Array of string verbs
-    targets: ["poe_port"]             # Array of target types
+    targets: ["poe-port"]             # Array of target types (kebab-case in manifest)
     dry_run: "required"               # required|optional|not_supported
     # Optional fields:
     invertible: 
@@ -67,8 +67,9 @@ capabilities:
 **Capability Rules**:
 - `id` becomes method name via `id.replace('.', '_')`  
 - Must have corresponding method in driver class
-- `dry_run` enum strictly enforced
+- `dry_run` enum strictly enforced: `required|optional|not_supported`
 - `verbs` and `targets` are free-form strings
+- **Target naming**: Use kebab-case in manifest (`stack-member`, `poe-port`) - API normalizes to snake_case for driver
 
 ### 2.5 Optional Sections
 
@@ -178,7 +179,10 @@ def inventory_list(self, target_type: str, active_only: bool = True, options: di
     """
 ```
 
-**Target Normalization**: API maps `stack-member`→`stack_member`, `poe-port`→`port` before driver call.
+**Target Normalization**: 
+- **In manifests**: Use kebab-case target names (`stack-member`, `poe-port`)
+- **API processing**: Normalizes to snake_case before driver calls (`stack-member`→`stack_member`, `poe-port`→`port`)
+- **Driver methods**: Receive normalized snake_case target types
 
 ### 3.4 Action Method Signatures
 
@@ -202,10 +206,20 @@ def vm_lifecycle(self, verb: str, target: dict, dry_run: bool = False, **params)
 
 ## 4. Inventory Targets & "Active" Definition
 
-### 4.1 Current Target Types
+### 4.1 Current Target Types & Naming
+
+**Target Naming Convention**:
+- **Manifest**: Use kebab-case (`stack-member`, `poe-port`)
+- **Driver receives**: snake_case after API normalization (`stack_member`, `port`)
+
+**Common target types**:
 - **vm**: Virtual machines
-- **stack_member**: Switch stack members  
-- **port**: Network ports (physical interfaces)
+- **stack-member**: Switch stack members (driver receives `stack_member`)  
+- **port**: Network ports/interfaces
+- **poe-port**: PoE-enabled ports (driver receives `port`)
+- **host**: Physical hosts/servers
+- **switch**: Network switches
+- **interface**: Generic network interfaces
 
 ### 4.2 Target Object Shapes
 
@@ -404,6 +418,23 @@ Provide clear remediation guidance in integration README for each potential fail
 - Verify all capability methods exist
 - Document required Python dependencies
 
+### 9.3 Common Schema Validation Issues
+
+**Target naming errors**: Use kebab-case in manifest targets:
+```yaml
+# ✓ Correct
+capabilities:
+  - id: inventory.list
+    targets: [stack-member, poe-port, vm]
+
+# ✗ Incorrect (snake_case in manifest)
+capabilities:
+  - id: inventory.list
+    targets: [stack_member, poe_port, vm]
+```
+
+The API normalizes kebab-case to snake_case before calling driver methods.
+
 ## 10. Examples
 
 ### 10.1 Proxmox VE Integration
@@ -447,15 +478,15 @@ name: ArubaOS-S Switches
 capabilities:
   - id: poe.port
     verbs: [set]
-    targets: [poe_port]
+    targets: [poe-port]
     dry_run: required
   - id: poe.priority
     verbs: [set] 
-    targets: [poe_port]
+    targets: [poe-port]
     dry_run: required
   - id: inventory.list
     verbs: [list]
-    targets: [stack_member, port]
+    targets: [stack-member, port]
     dry_run: optional
 ```
 

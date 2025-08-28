@@ -216,7 +216,7 @@
         "targets": { 
           "type": "array", 
           "items": { "type": "string" },
-          "description": "Array of target types (vm, stack_member, port, poe_port, etc.)"
+          "description": "Array of target types using kebab-case (stack-member, poe-port, vm, host, etc.). API normalizes to snake_case for driver calls."
         },
         "dry_run": { 
           "type": "string", 
